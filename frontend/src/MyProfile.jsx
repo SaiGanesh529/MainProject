@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AddPost from './AddPost';
+import ProfileHeader from './components/ProfileHeader';
+import ProfileGrid from './components/ProfileGrid';
 
 function MyProfile() {
   const [profile, setProfile] = useState(null);
@@ -12,15 +14,11 @@ function MyProfile() {
   const [updating, setUpdating] = useState(false);
 
   const navigate = useNavigate();
-
-  // Default placeholder image
   const DEFAULT_AVATAR = 'https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg';
-  const DEFAULT_POST = 'https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg';
 
-  // Memoize fetchProfile to prevent unnecessary re-renders
   const fetchProfile = useCallback(async () => {
     const token = localStorage.getItem('jwt_token');
-    
+
     if (!token) {
       navigate("/login");
       return;
@@ -47,7 +45,7 @@ function MyProfile() {
       }
 
       const data = await res.json();
-      setProfile(data.profile);   
+      setProfile(data.profile);
     } catch (error) {
       console.error("Error fetching my profile:", error);
     } finally {
@@ -124,203 +122,85 @@ function MyProfile() {
     return (
       <div className="max-w-4xl mx-auto mt-10 px-6">
         <AddPost onPostAdded={handlePostAdded} />
+        <button onClick={() => setShowAddPost(false)} className="mt-4 text-blue-600 hover:underline">Cancel</button>
       </div>
     );
   }
 
+  // Edit Profile Modal (Simplified overlay or inline)
   if (showEditProfile) {
     return (
-      <div className="max-w-4xl mx-auto mt-10 px-6">
-        <div className="max-w-xl mx-auto p-6 bg-white shadow-md rounded-lg">
-          <h2 className="text-2xl font-bold mb-6 text-center">Edit Profile</h2>
-          
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl p-6 max-w-md w-full">
+          <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
 
-          <div className="mb-6">
-            <label htmlFor="profile-pic" className="block text-gray-700 text-sm font-bold mb-2">
-              Profile Picture
+          <div className="mb-4 text-center">
+            <img
+              src={
+                profilePic
+                  ? URL.createObjectURL(profilePic)
+                  : profile?.profile_pic || DEFAULT_AVATAR
+              }
+              alt="Profile Preview"
+              className="w-24 h-24 rounded-full object-cover mx-auto mb-2 border"
+            />
+            <label className="text-blue-500 font-semibold text-sm cursor-pointer">
+              Change Profile Photo
+              <input type="file" className="hidden" accept="image/*" onChange={handleProfilePicChange} />
             </label>
-            <div className="flex items-center space-x-4">
-              <img
-                src={
-                  profilePic 
-                    ? URL.createObjectURL(profilePic) 
-                    : profile?.profile_pic || DEFAULT_AVATAR
-                }
-                alt="Profile Preview"
-                className="w-20 h-20 rounded-full object-cover border-2 border-gray-300"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = DEFAULT_AVATAR;
-                }}
-              />
-              <input
-                type="file"
-                id="profile-pic"
-                accept="image/*"
-                onChange={handleProfilePicChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Max file size: 5MB</p>
           </div>
 
-          <div className="mb-6">
-            <label htmlFor="bio" className="block text-gray-700 text-sm font-bold mb-2">
-              Bio
-            </label>
+          <div className="mb-4">
+            <label className="block text-sm font-semibold mb-1">Bio</label>
             <textarea
-              id="bio"
-              rows="4"
+              className="w-full border rounded p-2 text-sm"
+              rows="3"
               value={editBio}
               onChange={(e) => setEditBio(e.target.value)}
-              placeholder="Tell us about yourself..."
-              maxLength={150}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="Bio"
             />
-            <p className="text-xs text-gray-500 mt-1">{editBio.length}/150 characters</p>
           </div>
 
-          <div className="flex space-x-4">
-            <button
-              onClick={handleUpdateProfile}
-              disabled={updating}
-              className={`flex-1 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-300 ${
-                updating ? 'bg-gray-400 cursor-not-allowed' : 'hover:bg-blue-700'
-              }`}
-            >
-              {updating ? 'Updating...' : 'Update Profile'}
-            </button>
-            <button
-              onClick={handleCancelEdit}
-              disabled={updating}
-              className="flex-1 bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              Cancel
+          <div className="flex gap-2">
+            <button onClick={handleCancelEdit} className="flex-1 py-2 border rounded font-semibold text-sm">Cancel</button>
+            <button onClick={handleUpdateProfile} disabled={updating} className="flex-1 py-2 bg-blue-500 text-white rounded font-semibold text-sm">
+              {updating ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
       </div>
-    );
+    )
   }
 
+  if (loading) return <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div></div>;
+  if (!profile) return <div className="text-center p-10">Profile not found</div>;
+
   return (
-    <div className="max-w-4xl mx-auto mt-10 px-6">
-      {loading ? (
-        <div className="flex justify-center items-center h-40">
-          <div className="w-10 h-10 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-        </div>
-      ) : !profile ? (
-        <p className="text-center text-gray-500 mt-10">Profile not found.</p>
-      ) : (
-        <>
-          {/* Top section: Profile pic + info */}
+    <div className="w-full">
+      <ProfileHeader
+        user={profile}
+        actions={
+          <>
+            <button
+              onClick={() => setShowEditProfile(true)}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-1.5 rounded-lg text-sm font-semibold"
+            >
+              Edit profile
+            </button>
+            <button
+              onClick={() => setShowAddPost(true)}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-1.5 rounded-lg text-sm font-semibold"
+            >
+              New Post
+            </button>
+            {/* Settings icon usually goes here */}
+          </>
+        }
+      />
 
-          <div className="flex items-center gap-12">
-            <img
-              src={profile.profile_pic || DEFAULT_AVATAR}
-              alt="Profile"
-              className="w-36 h-36 rounded-full object-cover border-4 border-gray-200"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = DEFAULT_AVATAR;
-              }}
-            />
-            <div>
-              <h2 className="text-2xl font-semibold">{profile.user_name}</h2>
-              <p className="mt-1 text-gray-600">@{profile.user_id}</p>
+      {/* Highlights would go here */}
 
-              <div className="flex gap-6 mt-3 text-gray-800">
-                <span><b>{profile.posts_count || 0}</b> posts</span>
-                <span><b>{profile.followers_count || 0}</b> followers</span>
-                <span><b>{profile.following_count || 0}</b> following</span>
-              </div>
-
-              <p className="mt-3 text-sm text-gray-700 max-w-lg">
-                {profile.user_bio || "This user has not set a bio yet."}
-              </p>
-
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={() => setShowAddPost(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-300"
-                >
-                  Add New Post
-                </button>
-                <button
-                  onClick={handleEditProfile}
-                  className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition duration-300"
-                >
-                  Edit Profile
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Highlights */}
-          {profile.stories && profile.stories.length > 0 && (
-            <div className="flex gap-6 mt-8 overflow-x-auto pb-2">
-              {profile.stories.map((story) => (
-                <div key={story.id} className="flex flex-col items-center flex-shrink-0">
-                  <img
-                    src={story.imageUrl || DEFAULT_AVATAR}
-                    className="w-20 h-20 rounded-full border-2 border-gray-300 object-cover"
-                    alt={`story-${story.id}`}
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = DEFAULT_AVATAR;
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Posts */}
-          <div className="max-w-6xl mx-auto p-6">
-            <div className="flex items-center space-x-2 mb-6">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-gray-700"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z" />
-              </svg>
-              <h2 className="text-lg font-semibold text-gray-800">Posts</h2>
-            </div>
-
-
-            {profile?.posts && profile?.posts?.length > 0 ? (
-              <div className="grid grid-cols-3 gap-4">
-{profile.posts?.map((post) => (
-  <div key={post.id} className="relative group cursor-pointer">
-    <img
-      src={post?.image || DEFAULT_AVATAR}
-      className="w-full h-64 object-cover rounded-lg"
-      alt={`post-${post?.id}`}
-      onError={(e) => {
-        console.log('Failed to load image:', post.image);
-        e.target.onerror = null; // Prevent infinite loop
-        e.target.src = DEFAULT_POST;
-      }}
-    />
-  </div>
-))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500 mb-4">No posts yet</p>
-                <button
-                  onClick={() => setShowAddPost(true)}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-300"
-                >
-                  Create Your First Post
-                </button>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+      <ProfileGrid posts={profile.posts} />
     </div>
   );
 }

@@ -57,7 +57,7 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
       return res.status(400).json({ error: 'Image is required' });
     }
 
-    // Upload image to Cloudinary
+    
     const cloudinaryResult = await uploadToCloudinary(req.file);
 
     console.log('Cloudinary upload result:', cloudinaryResult);
